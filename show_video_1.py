@@ -335,10 +335,20 @@ class VideoBox(QMainWindow):
             self._show_bbox_from_json()
 
     def _save_to_json(self):
-        # save info of new add objects to var json_data
-        if self.json_data:
+        if self.json_url and self.json_data:
+            # Save info of new add objects to var json_data
             new_objects_count_in_current_frame = len(self.pictureLabel.Rectangle_list)
             if new_objects_count_in_current_frame:
+                def coord_transform(list_ii):
+                    # list_ii: [xa, ya, xb, yb] => [x1, y1, x2, y2] satisfy x1<x2, y1<y2
+                    if list_ii[0] > list_ii[2]:
+                        tmep_value = list_ii[0]
+                        list_ii[0] = list_ii[2]
+                        list_ii[2] = tmep_value
+                    if list_ii[1] > list_ii[3]:
+                        tmep_value = list_ii[1]
+                        list_ii[1] = list_ii[3]
+                        list_ii[3] = tmep_value
 
                 # current frame have objects from json file
                 if self.current_frame in self.all_frame_ids:
@@ -350,6 +360,7 @@ class VideoBox(QMainWindow):
                         if new_objects_count_in_current_frame > init_objects_count_in_current_frame:
                             new_add_bboxes = self.pictureLabel.Rectangle_list[init_objects_count_in_current_frame:]
                             for ii in new_add_bboxes:
+                                coord_transform(ii)
                                 one_object_struct = {
                                     "id": -1,
                                     "bbox": [-1, -1, -1, -1],
@@ -366,7 +377,7 @@ class VideoBox(QMainWindow):
 
                 # current frame have not objects from json file
                 else:
-                    print('New add objects count of new frame:', new_objects_count_in_current_frame)
+                    # print('New add objects count of new frame:', new_objects_count_in_current_frame)
                     init_frames_in_json_file = self.json_data['frames']
                     one_frame_struct = {
                         "frame_id": -1,
@@ -384,6 +395,7 @@ class VideoBox(QMainWindow):
 
                     new_add_bboxes = self.pictureLabel.Rectangle_list
                     for ii in new_add_bboxes:
+                        coord_transform(ii)
                         one_object_struct = {
                             "id": -1,
                             "bbox": [-1, -1, -1, -1],
@@ -396,8 +408,13 @@ class VideoBox(QMainWindow):
                         init_frames_in_json_file[self.all_frame_ids.index(self.current_frame)]['objects'].append(
                             new_add_objects)
 
-        # save json_data var to json
-        pass
+            # Save json_data var to json file
+            self._save_to_json_file()
+
+    def _save_to_json_file(self):
+        # Save json_data var to json file
+        with open(self.json_url[0], 'w') as f:
+            json.dump(self.json_data, f)
 
     def _show_frame(self):
         self.current_frame = int(self.playCapture.get(1))
