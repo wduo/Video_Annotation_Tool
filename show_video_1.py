@@ -355,6 +355,12 @@ class VideoBox(QMainWindow):
                     init_objects_in_current_frame = self.json_data['frames'][
                         self.all_frame_ids.index(self.current_frame)]['objects']
                     init_objects_count_in_current_frame = len(init_objects_in_current_frame)
+                    # Only modify objects that load form json file
+                    if new_objects_count_in_current_frame == init_objects_count_in_current_frame:
+                        bboxes_maybe_modify = self.pictureLabel.Rectangle_list
+                        for ii in bboxes_maybe_modify:
+                            coord_transform(ii)
+
                     if new_objects_count_in_current_frame != init_objects_count_in_current_frame:
                         # New add objects of frame that have objects from json file before new add
                         if new_objects_count_in_current_frame > init_objects_count_in_current_frame:
