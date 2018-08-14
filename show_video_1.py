@@ -212,7 +212,7 @@ class VideoBox(QMainWindow):
         helpMenu.addAction(loadJson)
 
         # Row 1
-        self.infoLabel = QLabel('Info:')
+        # self.infoLabel = QLabel('Info:')
         self.pictureLabel = VideoLable()
         self.pictureLabel.setGeometry(0, 0, 1000, 2000)
         init_image = QPixmap("images/video_init.png")
@@ -259,12 +259,17 @@ class VideoBox(QMainWindow):
         # Add row 1
         qgroupbox = QGroupBox('video')
 
-        qhboxlayout_1_1 = QHBoxLayout()
-        qhboxlayout_1_1.addStretch()
-        qhboxlayout_1_1.addWidget(self.pictureLabel)
-        qhboxlayout_1_1.addStretch()
+        qhboxlayout_1_1_1 = QHBoxLayout()
+        qhboxlayout_1_1_1.addStretch()
+        qhboxlayout_1_1_1.addWidget(self.pictureLabel)
+        qhboxlayout_1_1_1.addStretch()
 
-        qgroupbox.setLayout(qhboxlayout_1_1)
+        qvboxlayout_1_1 = QVBoxLayout()
+        qvboxlayout_1_1.addStretch()
+        qvboxlayout_1_1.addLayout(qhboxlayout_1_1_1)
+        qvboxlayout_1_1.addStretch()
+
+        qgroupbox.setLayout(qvboxlayout_1_1)
         qhboxlayout_1 = QHBoxLayout()
         qhboxlayout_1.addWidget(qgroupbox)
 
