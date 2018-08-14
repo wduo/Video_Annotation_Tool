@@ -27,17 +27,21 @@ class VideoLable(QLabel, QPainter):
     def __init__(self):
         QLabel.__init__(self)
         self.setMouseTracking(True)
+        self.temp_list = [0, 0, 0, 0]
         self.Rectangle_list = []
+        self.Point_list = []
         self.drawing = 0
         self.dragging = 0
         self.dragging_point = '00'
-        self.ind = -1
-        # self.moving = 0
+        self.ind = -1  # Rectangle index
+        self.point_ind = -1  # Point index
+        self.click_or_drag = 0  # click: 0, drag: 1. To determine draw rect or point
 
     def paintEvent(self, QPaintEvent):
         QLabel.paintEvent(self, QPaintEvent)
         painter = QPainter(self)
-        painter.setPen(QColor(255, 0, 0))
+        pen = QPen(QColor(255, 0, 0), 2)
+        painter.setPen(pen)
         painter.begin(self)
         for ii in range(self.ind + 1):
             # rect = QRect(self.Rectangle_list[ii][0], self.Rectangle_list[ii][1],
@@ -46,6 +50,13 @@ class VideoLable(QLabel, QPainter):
             painter.drawRect(self.Rectangle_list[ii][0], self.Rectangle_list[ii][1],
                              self.Rectangle_list[ii][2] - self.Rectangle_list[ii][0],
                              self.Rectangle_list[ii][3] - self.Rectangle_list[ii][1])
+
+        pen = QPen(QColor(0, 0, 255), 9)
+        painter.setPen(pen)
+
+        for ii in range(self.point_ind + 1):
+            painter.drawPoint(self.Point_list[ii][0], self.Point_list[ii][1])
+
         # print("(paintEvent)")
         painter.end()
 
@@ -58,10 +69,23 @@ class VideoLable(QLabel, QPainter):
             self.Rectangle_list[self.ind][0] = e.x()
             self.Rectangle_list[self.ind][1] = e.y()
 
+        self.click_or_drag = 0
+
     def mouseReleaseEvent(self, e):
         print('(mouseReleaseEvent)')
         self.drawing = 0
-        # self.moving = 0
+
+        print('click_or_drag:', self.click_or_drag)
+        if self.click_or_drag == 0:
+            self.Point_list.append(self.Rectangle_list.pop(-1)[:2])
+            self.point_ind += 1
+            self.ind -= 1
+            self.update()
+        else:
+            self.click_or_drag = 0
+        print('Rectangle_list:', self.Rectangle_list)
+        print('Point_list:', self.Point_list)
+
         if e.button() == Qt.LeftButton:
             print("Left button")
         elif e.button() == Qt.RightButton:
@@ -71,7 +95,7 @@ class VideoLable(QLabel, QPainter):
 
     def mouseMoveEvent(self, e):
         # print('(mouseMoveEvent)')
-        # self.moving = 1
+        self.click_or_drag = 1
         if not self.drawing:
             self.dragging = 0
             dist = 10
@@ -120,11 +144,13 @@ class VideoLable(QLabel, QPainter):
 
     def reset(self):
         self.Rectangle_list = []
+        self.Point_list = []
         self.drawing = 0
         self.dragging = 0
         self.dragging_point = '00'
         self.ind = -1
-        # self.moving = 0
+        self.point_ind = -1
+        self.click_or_drag = 0
 
 
 class VideoBox(QMainWindow):
@@ -188,10 +214,10 @@ class VideoBox(QMainWindow):
         # Row 1
         self.infoLabel = QLabel('Info:')
         self.pictureLabel = VideoLable()
-        self.pictureLabel.setGeometry(0, 0, 900, 550)
+        self.pictureLabel.setGeometry(0, 0, 1000, 2000)
         init_image = QPixmap("images/video_init.png")
         self.pictureLabel.setPixmap(init_image)
-        self.textLabel = QLabel('(50, 66, 200, 320, grab)\n(50, 66, 200, 320, eat)\n(50, 66, 200, 320, wandering)\n')
+        # self.textLabel = QLabel('(50, 66, 200, 320, grab)\n(50, 66, 200, 320, eat)\n(50, 66, 200, 320, wandering)\n')
 
         # Row 2
         self.pre_button = QPushButton('Pre', self)
@@ -214,23 +240,49 @@ class VideoBox(QMainWindow):
         # # self.save_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
         # self.save_button.clicked.connect(self.save_bbox)
 
-        grid = QGridLayout()
-        grid.setSpacing(20)
+        # grid = QGridLayout()
+        # grid.setSpacing(20)
+        #
+        # # Add row 1
+        # grid.addWidget(self.pictureLabel, 0, 1, 2, 6)
+        # # grid.addWidget(self.infoLabel, 0, 7)
+        # # grid.addWidget(self.textLabel, 1, 7)
+        #
+        # # Add row 3
+        # grid.addWidget(self.pre_button, 2, 1)
+        # grid.addWidget(self.next_button, 2, 2)
+        # grid.addWidget(self.play_button, 2, 3)
+        # grid.addWidget(self.slower_play_button, 2, 4)
+        # grid.addWidget(self.faster_play_button, 2, 5)
+        # # grid.addWidget(self.save_button, 2, 6)
 
         # Add row 1
-        grid.addWidget(self.pictureLabel, 0, 1, 2, 6)
-        # grid.addWidget(self.infoLabel, 0, 7)
-        # grid.addWidget(self.textLabel, 1, 7)
+        qgroupbox = QGroupBox('video')
 
-        # Add row 3
-        grid.addWidget(self.pre_button, 2, 1)
-        grid.addWidget(self.next_button, 2, 2)
-        grid.addWidget(self.play_button, 2, 3)
-        grid.addWidget(self.slower_play_button, 2, 4)
-        grid.addWidget(self.faster_play_button, 2, 5)
-        # grid.addWidget(self.save_button, 2, 6)
+        qhboxlayout_1_1 = QHBoxLayout()
+        qhboxlayout_1_1.addStretch()
+        qhboxlayout_1_1.addWidget(self.pictureLabel)
+        qhboxlayout_1_1.addStretch()
 
-        CentQWidget.setLayout(grid)
+        qgroupbox.setLayout(qhboxlayout_1_1)
+        qhboxlayout_1 = QHBoxLayout()
+        qhboxlayout_1.addWidget(qgroupbox)
+
+        # Add row 2
+        qhboxlayout_2 = QHBoxLayout()
+        qhboxlayout_2.addStretch(1)
+        qhboxlayout_2.addWidget(self.pre_button, 2)
+        qhboxlayout_2.addWidget(self.next_button, 2)
+        qhboxlayout_2.addWidget(self.play_button, 2)
+        qhboxlayout_2.addWidget(self.slower_play_button, 2)
+        qhboxlayout_2.addWidget(self.faster_play_button, 2)
+        qhboxlayout_2.addStretch(1)
+
+        qvboxlayout = QVBoxLayout()
+        qvboxlayout.addLayout(qhboxlayout_1)
+        qvboxlayout.addLayout(qhboxlayout_2)
+
+        CentQWidget.setLayout(qvboxlayout)
 
         # Video Timer
         self.timer = VideoTimer()
