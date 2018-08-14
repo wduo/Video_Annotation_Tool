@@ -227,7 +227,7 @@ class VideoBox(QMainWindow):
         self.video_slider.setOrientation(Qt.Horizontal)
         self.video_slider.setMinimum(0)
         self.video_slider.setMaximum(100)
-        self.video_slider.setSingleStep(1)
+        self.video_slider.setSingleStep(10)
         self.video_slider.valueChanged.connect(self.video_slider_drag)
 
         self.pre_button = QPushButton('Pre', self)
@@ -251,6 +251,7 @@ class VideoBox(QMainWindow):
         self.faster_play_button.clicked.connect(self.faster_play)
 
         # Col 2
+        self.object_table = LabelList()
 
         # self.save_button = QPushButton('Save', self)
         # # self.save_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
@@ -315,8 +316,14 @@ class VideoBox(QMainWindow):
 
         # Col 2
         right_qvboxlayout = QVBoxLayout()
+        right_qvboxlayout.addWidget(self.object_table)
 
-        CentQWidget.setLayout(left_qvboxlayout)
+        # Central QWidget layout
+        central_layout = QHBoxLayout()
+        central_layout.addLayout(left_qvboxlayout, 8)
+        central_layout.addLayout(right_qvboxlayout, 2)
+
+        CentQWidget.setLayout(central_layout)
 
         # Video Timer
         self.timer = VideoTimer()
@@ -332,7 +339,7 @@ class VideoBox(QMainWindow):
         p_desk = QApplication.desktop()
         screennum = p_desk.screenCount()
         screen_rect = p_desk.screenGeometry(0)
-        scale_factor = .6
+        scale_factor = .8
         self.setGeometry(screen_rect.width() * .5 - screen_rect.width() * scale_factor * .5,
                          screen_rect.height() * .5 - screen_rect.height() * scale_factor * .5,
                          screen_rect.width() * scale_factor,
@@ -512,6 +519,7 @@ class VideoBox(QMainWindow):
         self.current_frame = int(self.playCapture.get(1))
         self.statusBar().showMessage('fps: %s, current_frame: %s' % (self.fps, self.current_frame))
         self.pictureLabel.reset()
+        # self.video_slider.setSliderPosition(self.current_frame)
         success, frame = self.playCapture.read()
         if success:
             height, width = frame.shape[:2]
@@ -569,8 +577,7 @@ class VideoBox(QMainWindow):
     def video_slider_drag(self):
         print('(video_slider_drag)')
         if self.playCapture.isOpened():
-            self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)))
-            self.playCapture.set(CAP_PROP_POS_FRAMES, self.video_slider.value())
+            self.playCapture.set(cv2.CAP_PROP_POS_FRAMES, self.video_slider.value())
 
             self.show_frame()
 
@@ -590,6 +597,8 @@ class VideoBox(QMainWindow):
             self.timer.start()
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.play_button.setText('Pause')
+            self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)))
+
             self.status = (VideoBox.STATUS_PLAYING,
                            VideoBox.STATUS_PAUSE,
                            VideoBox.STATUS_PLAYING)[self.status]
@@ -651,6 +660,78 @@ class VideoTimer(QThread):
     def set_fps(self, fps):
         self.frequent = fps
 
+
+# ======================================================
+class LabelList(QTableWidget):
+    horizontalHeader = ["PersonID", "xmin", "ymin", "xmax", "ymax", "lable"]
+    action_labels = ["0", "1", "2", "3", "4", "5"]
+
+    def __init__(self):
+        QTableWidget.__init__(self)
+        self.json_matrix = list()
+
+    def change_value_for_check(self):
+        """
+        this is for the multible check connect
+        :return:
+        """
+        if hasattr(self, 'row') and hasattr(self, 'col'):
+
+            if self.value != self.instance_list[self.row].currentText():
+                self.json_matrix[self.row][self.col] = self.instance_list[self.row].currentText()
+            else:
+                self.json_matrix[self.row][self.col] = self.value
+
+    def change_value(self):
+        """
+        for the value change in table connect
+        :return:
+        """
+        if hasattr(self, 'row') and hasattr(self, 'col'):
+            if self.value != self.table.item(self.row, self.col):
+                self.json_matrix[self.row][self.col] = self.table.item(self.row, self.col).text()
+            else:
+                self.json_matrix[self.row][self.col] = self.value
+
+    def before_value_pos(self):
+        """
+        get the position and the value befor change
+        :return:
+        """
+        items = self.table.selectedItems()
+        if items:
+            item = self.table.indexFromItem(items[0])
+            # return location
+            self.row = item.row()
+            self.col = item.column()
+            self.value = items[0].text()
+        else:
+            self.value = None
+
+    def init_table(self):
+        """
+        init the table
+        :return:
+        """
+        rows = len(self.json_matrix)
+        cols = len(LabelList.horizontalHeader)
+        self.table.setRowCount(rows)
+        self.instance_list = []
+        basic_str = "qcombobox"
+        for i in range(self.table.rowCount()):
+            self.instance_list.append(basic_str + str(i))
+            self.instance_list[i] = QComboBox()
+            self.instance_list[i].addItems(LabelList.action_labels)
+            self.instance_list[i].setCurrentIndex(LabelList.action_labels.index(self.json_matrix[i][-1])
+                                                  if self.json_matrix[i][-1] in LabelList.action_labels else -1)
+            self.instance_list[i].currentIndexChanged.connect(self.change_value_for_check)
+            self.table.setCellWidget(i, self.table.columnCount() - 1, self.instance_list[i])
+        for row in range(rows):
+            for col in range(cols):
+                self.table.setItem(row, col, QTableWidgetItem(self.json_matrix[row][col]))
+
+
+# ======================================================
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
