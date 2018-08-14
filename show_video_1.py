@@ -211,6 +211,7 @@ class VideoBox(QMainWindow):
         helpMenu.addAction(loadVideo)
         helpMenu.addAction(loadJson)
 
+        # Col 1
         # Row 1
         # self.infoLabel = QLabel('Info:')
         self.pictureLabel = VideoLable()
@@ -220,21 +221,36 @@ class VideoBox(QMainWindow):
         # self.textLabel = QLabel('(50, 66, 200, 320, grab)\n(50, 66, 200, 320, eat)\n(50, 66, 200, 320, wandering)\n')
 
         # Row 2
+        self.progress_label = QLabel('Video progress: ')
+
+        self.video_slider = QSlider()
+        self.video_slider.setOrientation(Qt.Horizontal)
+        self.video_slider.setMinimum(0)
+        self.video_slider.setMaximum(100)
+        self.video_slider.setSingleStep(1)
+        self.video_slider.valueChanged.connect(self.video_slider_drag)
+
         self.pre_button = QPushButton('Pre', self)
         self.pre_button.setIcon(QIcon('images/pre_frame'))
         self.pre_button.clicked.connect(self.pre_frame)
+
         self.next_button = QPushButton('Next', self)
         self.next_button.setIcon(QIcon('images/next_frame'))
         self.next_button.clicked.connect(self.next_frame)
+
         self.play_button = QPushButton('Play', self)
         self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.play_button.clicked.connect(self.switch_status)
+
         self.slower_play_button = QPushButton('Slower', self)
         self.slower_play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
         self.slower_play_button.clicked.connect(self.slower_play)
+
         self.faster_play_button = QPushButton('Faster', self)
         self.faster_play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
         self.faster_play_button.clicked.connect(self.faster_play)
+
+        # Col 2
 
         # self.save_button = QPushButton('Save', self)
         # # self.save_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
@@ -256,6 +272,7 @@ class VideoBox(QMainWindow):
         # grid.addWidget(self.faster_play_button, 2, 5)
         # # grid.addWidget(self.save_button, 2, 6)
 
+        # Col 1
         # Add row 1
         qgroupbox = QGroupBox('video')
 
@@ -274,20 +291,32 @@ class VideoBox(QMainWindow):
         qhboxlayout_1.addWidget(qgroupbox)
 
         # Add row 2
-        qhboxlayout_2 = QHBoxLayout()
-        qhboxlayout_2.addStretch(1)
-        qhboxlayout_2.addWidget(self.pre_button, 2)
-        qhboxlayout_2.addWidget(self.next_button, 2)
-        qhboxlayout_2.addWidget(self.play_button, 2)
-        qhboxlayout_2.addWidget(self.slower_play_button, 2)
-        qhboxlayout_2.addWidget(self.faster_play_button, 2)
-        qhboxlayout_2.addStretch(1)
+        qhboxlayout_2_1 = QHBoxLayout()
+        qhboxlayout_2_1.addWidget(self.progress_label, 1)
+        qhboxlayout_2_1.addWidget(self.video_slider, 9)
 
-        qvboxlayout = QVBoxLayout()
-        qvboxlayout.addLayout(qhboxlayout_1)
-        qvboxlayout.addLayout(qhboxlayout_2)
+        qhboxlayout_2_2 = QHBoxLayout()
+        qhboxlayout_2_2.addStretch(1)
+        qhboxlayout_2_2.addWidget(self.pre_button, 2)
+        qhboxlayout_2_2.addWidget(self.next_button, 2)
+        qhboxlayout_2_2.addWidget(self.play_button, 2)
+        qhboxlayout_2_2.addWidget(self.slower_play_button, 2)
+        qhboxlayout_2_2.addWidget(self.faster_play_button, 2)
+        qhboxlayout_2_2.addStretch(1)
 
-        CentQWidget.setLayout(qvboxlayout)
+        qvboxlayout_2 = QVBoxLayout()
+        qvboxlayout_2.addLayout(qhboxlayout_2_1)
+        qvboxlayout_2.addLayout(qhboxlayout_2_2)
+
+        # QVBoxLayout that has row 1 and row 2
+        left_qvboxlayout = QVBoxLayout()
+        left_qvboxlayout.addLayout(qhboxlayout_1)
+        left_qvboxlayout.addLayout(qvboxlayout_2)
+
+        # Col 2
+        right_qvboxlayout = QVBoxLayout()
+
+        CentQWidget.setLayout(left_qvboxlayout)
 
         # Video Timer
         self.timer = VideoTimer()
@@ -537,8 +566,13 @@ class VideoBox(QMainWindow):
             self.fps *= 2
             self.timer.set_fps(self.fps)
 
-    # def save_bbox(self):
-    #     print('(save_bbox)')
+    def video_slider_drag(self):
+        print('(video_slider_drag)')
+        if self.playCapture.isOpened():
+            self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)))
+            self.playCapture.set(CAP_PROP_POS_FRAMES, self.video_slider.value())
+
+            self.show_frame()
 
     def Load_video(self):
         print('(Load_video)')
