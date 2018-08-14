@@ -275,7 +275,7 @@ class VideoBox(QMainWindow):
 
         # Col 1
         # Add row 1
-        qgroupbox = QGroupBox('video')
+        qgroupbox = QGroupBox('Video')
 
         qhboxlayout_1_1_1 = QHBoxLayout()
         qhboxlayout_1_1_1.addStretch()
@@ -315,13 +315,15 @@ class VideoBox(QMainWindow):
         left_qvboxlayout.addLayout(qvboxlayout_2)
 
         # Col 2
-        right_qvboxlayout = QVBoxLayout()
-        right_qvboxlayout.addWidget(self.object_table)
+        right_qgroupbox = QGroupBox('Info')
+        qvboxlayout = QVBoxLayout()
+        qvboxlayout.addWidget(self.object_table)
+        right_qgroupbox.setLayout(qvboxlayout)
 
         # Central QWidget layout
         central_layout = QHBoxLayout()
         central_layout.addLayout(left_qvboxlayout, 8)
-        central_layout.addLayout(right_qvboxlayout, 2)
+        central_layout.addWidget(right_qgroupbox, 3)
 
         CentQWidget.setLayout(central_layout)
 
@@ -551,16 +553,27 @@ class VideoBox(QMainWindow):
                     'fps: %s, current_frame: %s, load bbox' % (self.fps, self.current_frame))
                 objects_in_current_frame = self.json_data['frames'][
                     self.all_frame_ids.index(self.current_frame)]['objects']
+                object_id = []
                 bboxes = []
+                object_keypoints = []
+                object_action = []
                 for ii in objects_in_current_frame:
+                    object_id.append(ii['id'])
                     bboxes.append(ii['bbox'])
+                    object_action.append(ii['action'])
                 print('Frame', self.current_frame, "bbox:", bboxes)
 
+                # Update pictureLabel
                 self.pictureLabel.Rectangle_list = bboxes
                 # print(self.pictureLabel.Rectangle_list)
                 self.pictureLabel.ind = len(bboxes) - 1
                 # print(self.pictureLabel.ind)
                 self.pictureLabel.update()
+
+                # Update object_table
+
+    def _show_object_list_from_json(self):
+        pass
 
     def slower_play(self):
         print('(slower_play)')
