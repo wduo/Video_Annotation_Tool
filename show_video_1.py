@@ -211,6 +211,36 @@ class VideoBox(QMainWindow):
         helpMenu.addAction(loadVideo)
         helpMenu.addAction(loadJson)
 
+        # Col 0
+        self.software_guide = QLabel('''
+        step1.
+        加载视频文件。
+        如果不加载视频文件，
+        则无法加载Json文件，
+        所以请先执行本步操作。
+        step2.
+        加载Json文件。
+        如果加载视频文件后未加载Json文件，
+        您可以执行第3 4步，
+        但在第3步中所做操作产生的
+        结果不会在执行第4步后被被保存。
+        step3.
+        修改objectid，actionlabels。
+        修改或添加bboxes，keypoints。
+        step4.
+        保存第三步操作的结果到对应的Json文件。
+        当切换帧，即按下上一帧，下一帧，播放时，
+        自动保存。
+        
+        请随时关注最下方状态栏信息
+        
+        Video file name:
+        No load video file, press CTRL+O to load it first!
+
+        Json file name:
+        No load json file, press CTRL+J to load it first!
+        ''')
+
         # Col 1
         # Row 1
         # self.infoLabel = QLabel('Info:')
@@ -273,9 +303,23 @@ class VideoBox(QMainWindow):
         # grid.addWidget(self.faster_play_button, 2, 5)
         # # grid.addWidget(self.save_button, 2, 6)
 
+        # Col 0
+        left_qgroupbox_1 = QGroupBox('Software guide')
+        left_qvboxlayout_1_1 = QVBoxLayout()
+        left_qgroupbox_1.setLayout(left_qvboxlayout_1_1)
+
+        left_qgroupbox_2 = QGroupBox('Video file list')
+        left_qvboxlayout_2_1 = QVBoxLayout()
+        left_qvboxlayout_2_1.addWidget(self.object_table)
+        left_qgroupbox_2.setLayout(left_qvboxlayout_2_1)
+
+        left_qvboxlayout = QVBoxLayout()
+        left_qvboxlayout.addWidget(left_qgroupbox_1)
+        left_qvboxlayout.addWidget(left_qgroupbox_2)
+
         # Col 1
         # Add row 1
-        qgroupbox = QGroupBox('Video')
+        qgroupbox = QGroupBox('Video playing')
 
         qhboxlayout_1_1_1 = QHBoxLayout()
         qhboxlayout_1_1_1.addStretch()
@@ -310,20 +354,29 @@ class VideoBox(QMainWindow):
         qvboxlayout_2.addLayout(qhboxlayout_2_2)
 
         # QVBoxLayout that has row 1 and row 2
-        left_qvboxlayout = QVBoxLayout()
-        left_qvboxlayout.addLayout(qhboxlayout_1)
-        left_qvboxlayout.addLayout(qvboxlayout_2)
+        central_qvboxlayout = QVBoxLayout()
+        central_qvboxlayout.addLayout(qhboxlayout_1)
+        central_qvboxlayout.addLayout(qvboxlayout_2)
 
         # Col 2
-        right_qgroupbox = QGroupBox('Info')
-        qvboxlayout = QVBoxLayout()
-        qvboxlayout.addWidget(self.object_table)
-        right_qgroupbox.setLayout(qvboxlayout)
+        right_qgroupbox_1 = QGroupBox('Video info')
+        right_qvboxlayout_1_1 = QVBoxLayout()
+        right_qgroupbox_1.setLayout(right_qvboxlayout_1_1)
+
+        right_qgroupbox_2 = QGroupBox('Object list')
+        right_qvboxlayout_2_1 = QVBoxLayout()
+        right_qvboxlayout_2_1.addWidget(self.object_table)
+        right_qgroupbox_2.setLayout(right_qvboxlayout_2_1)
+
+        right_qvboxlayout = QVBoxLayout()
+        right_qvboxlayout.addWidget(right_qgroupbox_1, 2)
+        right_qvboxlayout.addWidget(right_qgroupbox_2, 8)
 
         # Central QWidget layout
         central_layout = QHBoxLayout()
-        central_layout.addLayout(left_qvboxlayout, 8)
-        central_layout.addWidget(right_qgroupbox, 3)
+        central_layout.addLayout(left_qvboxlayout, 2)
+        central_layout.addLayout(central_qvboxlayout, 8)
+        central_layout.addLayout(right_qvboxlayout, 3)
 
         CentQWidget.setLayout(central_layout)
 
@@ -588,7 +641,8 @@ class VideoBox(QMainWindow):
             self.timer.set_fps(self.fps)
 
     def video_slider_drag(self):
-        print('(video_slider_drag)')
+        # print('(video_slider_drag)')
+        print('video_slider.value:', self.video_slider.value())
         if self.playCapture.isOpened():
             self.playCapture.set(cv2.CAP_PROP_POS_FRAMES, self.video_slider.value())
 
