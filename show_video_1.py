@@ -477,13 +477,6 @@ class VideoBox(QMainWindow):
                            VideoBox.STATUS_PAUSE,
                            VideoBox.STATUS_PLAYING)[self.status]
 
-    def show_frame(self):
-        if self.playCapture.isOpened():
-            # Frame show
-            self._show_frame()
-            # Show bbox from json
-            self._show_object_from_json()
-
     def _save_to_json(self):
         if self.json_url and self.json_data:
             # Save info of new add objects to var json_data
@@ -572,6 +565,13 @@ class VideoBox(QMainWindow):
         with open(self.json_url[0], 'w') as f:
             json.dump(self.json_data, f)
 
+    def show_frame(self):
+        if self.playCapture.isOpened():
+            # Frame show
+            self._show_frame()
+            # Show bbox from json
+            self._show_object_from_json()
+
     def _show_frame(self):
         self.current_frame = int(self.playCapture.get(1))
         self.statusBar().showMessage('fps: %s, current_frame: %s' % (self.fps, self.current_frame))
@@ -579,6 +579,7 @@ class VideoBox(QMainWindow):
         if self.object_table.object_ids and self.object_table.object_actions:
             self.object_table.reset_object_table()
         # self.video_slider.setSliderPosition(self.current_frame)
+
         success, frame = self.playCapture.read()
         if success:
             height, width = frame.shape[:2]
@@ -673,7 +674,7 @@ class VideoBox(QMainWindow):
             self.json_url = ""
             self.json_file_name = "default_json_name"
             self.json_data = []
-            
+
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.play_button.setText('Pause')
             self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)))
