@@ -758,8 +758,12 @@ class ObjectList(QTableWidget):
         self.object_ids = []
         self.object_actions = []
 
-        # self.itemSelectionChanged.connect(self.before_value_pos)
-        # self.itemChanged.connect(self.change_value)
+        self.selected_item_value = None
+        self.selected_item_row = None
+        self.selected_item_col = None
+
+        self.itemSelectionChanged.connect(self.item_selection_changed)
+        self.itemChanged.connect(self.change_value)
 
     def show_pid_action(self):
         if self.object_ids and self.object_actions:
@@ -780,13 +784,39 @@ class ObjectList(QTableWidget):
                 # qcombobox.currentIndexChanged.connect(self.change_value_for_check)
                 self.setCellWidget(row, 1, qcombobox)
 
-        pass
-
     def reset_object_table(self):
         self.object_ids = []
         self.object_actions = []
         self.clearContents()
         self.setRowCount(0)
+
+    def item_selection_changed(self):
+        """
+        Get the position and value before be changed.
+        """
+        selected_item = self.selectedItems()
+        # For person id column
+        if selected_item and isinstance(selected_item[0], QTableWidgetItem):
+            self.selected_item_value = int(selected_item[0].text())
+            selected_item_index = self.indexFromItem(selected_item[0])
+            # Selected_item location
+            self.selected_item_row = selected_item_index.row()
+            self.selected_item_col = selected_item_index.column()
+        else:
+            self.selected_item_value = None
+            self.selected_item_row = None
+            self.selected_item_col = None
+
+        print(self.selected_item_row, self.selected_item_col, self.selected_item_value)
+
+    def change_value(self):
+        if self.selected_item_value is not None and self.selected_item_row is not None and \
+                self.selected_item_col is not None:
+            new_value = int(self.item(self.selected_item_row, self.selected_item_col).text())
+            if self.selected_item_value != new_value:
+                self.object_ids[self.selected_item_row] = new_value
+
+            pass
 
     def init_table(self):
         rows = len(self.json_matrix)
@@ -817,32 +847,6 @@ class ObjectList(QTableWidget):
                 self.json_matrix[self.row][self.col] = self.instance_list[self.row].currentText()
             else:
                 self.json_matrix[self.row][self.col] = self.value
-
-    def change_value(self):
-        """
-        for the value change in table connect
-        :return:
-        """
-        if hasattr(self, 'row') and hasattr(self, 'col'):
-            if self.value != self.table.item(self.row, self.col):
-                self.json_matrix[self.row][self.col] = self.table.item(self.row, self.col).text()
-            else:
-                self.json_matrix[self.row][self.col] = self.value
-
-    def before_value_pos(self):
-        """
-        get the position and the value befor change
-        :return:
-        """
-        items = self.table.selectedItems()
-        if items:
-            item = self.table.indexFromItem(items[0])
-            # return location
-            self.row = item.row()
-            self.col = item.column()
-            self.value = items[0].text()
-        else:
-            self.value = None
 
 
 # ======================================================
