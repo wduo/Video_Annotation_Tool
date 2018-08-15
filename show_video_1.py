@@ -245,9 +245,10 @@ class VideoBox(QMainWindow):
         # Row 1
         # self.infoLabel = QLabel('Info:')
         self.pictureLabel = VideoLable()
-        self.pictureLabel.setGeometry(0, 0, 1000, 2000)
+        self.pictureLabel.setGeometry(0, 0, 1000, 10000)
         init_image = QPixmap("images/video_init.png")
         self.pictureLabel.setPixmap(init_image)
+        # print(self.pictureLabel.geometry().width())
         # self.textLabel = QLabel('(50, 66, 200, 320, grab)\n(50, 66, 200, 320, eat)\n(50, 66, 200, 320, wandering)\n')
 
         # Row 2
@@ -281,7 +282,7 @@ class VideoBox(QMainWindow):
         self.faster_play_button.clicked.connect(self.faster_play)
 
         # Col 2
-        self.object_table = LabelList()
+        self.object_table = ObjectList()
 
         # self.save_button = QPushButton('Save', self)
         # # self.save_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
@@ -480,7 +481,7 @@ class VideoBox(QMainWindow):
             # Frame show
             self._show_frame()
             # Show bbox from json
-            self._show_bbox_from_json()
+            self._show_object_from_json()
 
     def _save_to_json(self):
         if self.json_url and self.json_data:
@@ -599,21 +600,22 @@ class VideoBox(QMainWindow):
                 self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
                 self.play_button.setText('Play')
 
-    def _show_bbox_from_json(self):
+    def _show_object_from_json(self):
         if self.json_data:
             if self.current_frame in self.all_frame_ids:
                 self.statusBar().showMessage(
                     'fps: %s, current_frame: %s, load bbox' % (self.fps, self.current_frame))
                 objects_in_current_frame = self.json_data['frames'][
                     self.all_frame_ids.index(self.current_frame)]['objects']
-                object_id = []
+                object_ids = []
                 bboxes = []
                 object_keypoints = []
-                object_action = []
+                object_actions = []
                 for ii in objects_in_current_frame:
-                    object_id.append(ii['id'])
+                    object_ids.append(ii['id'])
                     bboxes.append(ii['bbox'])
-                    object_action.append(ii['action'])
+                    object_keypoints.append(ii['keypoints'])
+                    object_actions.append(ii['action'])
                 print('Frame', self.current_frame, "bbox:", bboxes)
 
                 # Update pictureLabel
@@ -624,9 +626,8 @@ class VideoBox(QMainWindow):
                 self.pictureLabel.update()
 
                 # Update object_table
-
-    def _show_object_list_from_json(self):
-        pass
+                self.object_table.show_pid_bbox_action(object_ids, object_actions)
+                pass
 
     def slower_play(self):
         print('(slower_play)')
@@ -729,13 +730,57 @@ class VideoTimer(QThread):
 
 
 # ======================================================
-class LabelList(QTableWidget):
-    horizontalHeader = ["PersonID", "xmin", "ymin", "xmax", "ymax", "lable"]
+class ObjectList(QTableWidget):
+    # horizontalHeader = ["PersonID", "xmin", "ymin", "xmax", "ymax", "lable"]
+    horizontalHeader = ["Person ID", "Action lable"]
     action_labels = ["0", "1", "2", "3", "4", "5"]
 
     def __init__(self):
         QTableWidget.__init__(self)
-        self.json_matrix = list()
+        self.setRowCount(0)
+        self.setColumnCount(len(ObjectList.horizontalHeader))
+        self.setHorizontalHeaderLabels(ObjectList.horizontalHeader)
+
+        # self.itemSelectionChanged.connect(self.before_value_pos)
+        # self.itemChanged.connect(self.change_value)
+
+    def show_pid_bbox_action(self, object_ids, object_actions):
+        assert len(object_ids) == len(object_actions)
+        self.clearContents()
+
+        rows = len(object_ids)
+        self.setRowCount(rows)
+        for row in range(rows):
+            # Pid
+            self.setItem(row, 0, QTableWidgetItem(str(object_ids[row])))
+
+            # Action label
+            qcombobox = QComboBox()
+            qcombobox.addItems(ObjectList.action_labels)
+            qcombobox.setCurrentIndex(ObjectList.action_labels.index(object_actions[row])
+                                      if object_actions[row] in ObjectList.action_labels else -1)
+            # qcombobox.currentIndexChanged.connect(self.change_value_for_check)
+            self.setCellWidget(row, 1, qcombobox)
+
+            pass
+
+    def init_table(self):
+        rows = len(self.json_matrix)
+        cols = len(ObjectList.horizontalHeader)
+        self.setRowCount(rows)
+        self.instance_list = []
+        basic_str = "qcombobox"
+        for i in range(self.rowCount()):
+            self.instance_list.append(basic_str + str(i))
+            self.instance_list[i] = QComboBox()
+            self.instance_list[i].addItems(ObjectList.action_labels)
+            self.instance_list[i].setCurrentIndex(ObjectList.action_labels.index(self.json_matrix[i][-1])
+                                                  if self.json_matrix[i][-1] in ObjectList.action_labels else -1)
+            self.instance_list[i].currentIndexChanged.connect(self.change_value_for_check)
+            self.setCellWidget(i, self.columnCount() - 1, self.instance_list[i])
+        for row in range(rows):
+            for col in range(cols):
+                self.setItem(row, col, QTableWidgetItem(self.json_matrix[row][col]))
 
     def change_value_for_check(self):
         """
@@ -774,28 +819,6 @@ class LabelList(QTableWidget):
             self.value = items[0].text()
         else:
             self.value = None
-
-    def init_table(self):
-        """
-        init the table
-        :return:
-        """
-        rows = len(self.json_matrix)
-        cols = len(LabelList.horizontalHeader)
-        self.table.setRowCount(rows)
-        self.instance_list = []
-        basic_str = "qcombobox"
-        for i in range(self.table.rowCount()):
-            self.instance_list.append(basic_str + str(i))
-            self.instance_list[i] = QComboBox()
-            self.instance_list[i].addItems(LabelList.action_labels)
-            self.instance_list[i].setCurrentIndex(LabelList.action_labels.index(self.json_matrix[i][-1])
-                                                  if self.json_matrix[i][-1] in LabelList.action_labels else -1)
-            self.instance_list[i].currentIndexChanged.connect(self.change_value_for_check)
-            self.table.setCellWidget(i, self.table.columnCount() - 1, self.instance_list[i])
-        for row in range(rows):
-            for col in range(cols):
-                self.table.setItem(row, col, QTableWidgetItem(self.json_matrix[row][col]))
 
 
 # ======================================================
