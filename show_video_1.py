@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from cv2 import *
 import json
 import copy
+import ctypes
 
 
 class VideoRectangle:
@@ -403,6 +404,7 @@ class VideoBox(QMainWindow):
                          screen_rect.height() * scale_factor)
         self.setWindowTitle(' Video Annotater')
         self.setWindowIcon(QIcon('images/icon_0.png'))
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('images/icon_0.png')
 
     def pre_frame(self):
         print('(pre_frame)')
@@ -689,9 +691,9 @@ class VideoBox(QMainWindow):
             self.json_url = QFileDialog.getOpenFileName(self, "Load json dialog", os.getcwd() + '/jsons')
             if self.json_url[0]:
                 self.json_file_name = self.json_url[0].split('/')[-1]
-                print("Load json:", self.json_file_name)
-
                 if self.json_file_name == self.video_file_name + '.json':
+                    print("Load json:", self.json_file_name)
+
                     with open(self.json_url[0], 'r') as f:
                         self.json_data = json.load(f)
                         # print("Load json:", self.json_data['frames'])
