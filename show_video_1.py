@@ -664,10 +664,16 @@ class VideoBox(QMainWindow):
             self.playCapture.open(self.video_url[0])
             self.status = VideoBox.STATUS_INIT
             self.fps = self.playCapture.get(CAP_PROP_FPS)
-            self.timer.set_fps(self.fps)
             self.playCapture.set(cv2.CAP_PROP_POS_FRAMES, 1133)
             # self.playCapture.set(cv2.CAP_PROP_POS_FRAMES, 4633)
+
+            self.timer.set_fps(self.fps)
             self.timer.start()
+
+            self.json_url = ""
+            self.json_file_name = "default_json_name"
+            self.json_data = []
+            
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.play_button.setText('Pause')
             self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)))
