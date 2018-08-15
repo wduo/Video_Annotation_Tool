@@ -77,10 +77,11 @@ class VideoLable(QLabel, QPainter):
 
         print('click_or_drag:', self.click_or_drag)
         if self.click_or_drag == 0:
-            self.Point_list.append(self.Rectangle_list.pop(-1)[:2])
-            self.point_ind += 1
-            self.ind -= 1
-            self.update()
+            if self.Rectangle_list:  # This if judge fixed bug that when playing and clicking occur simultaneously
+                self.Point_list.append(self.Rectangle_list.pop(-1)[:2])
+                self.point_ind += 1
+                self.ind -= 1
+                self.update()
         else:
             self.click_or_drag = 0
         print('Rectangle_list:', self.Rectangle_list)
@@ -575,6 +576,8 @@ class VideoBox(QMainWindow):
         self.current_frame = int(self.playCapture.get(1))
         self.statusBar().showMessage('fps: %s, current_frame: %s' % (self.fps, self.current_frame))
         self.pictureLabel.reset()
+        if self.object_table.object_ids and self.object_table.object_actions:
+            self.object_table.reset_object_table()
         # self.video_slider.setSliderPosition(self.current_frame)
         success, frame = self.playCapture.read()
         if success:
@@ -626,7 +629,9 @@ class VideoBox(QMainWindow):
                 self.pictureLabel.update()
 
                 # Update object_table
-                self.object_table.show_pid_bbox_action(object_ids, object_actions)
+                self.object_table.object_ids = object_ids
+                self.object_table.object_actions = object_actions
+                self.object_table.show_pid_action()
                 pass
 
     def slower_play(self):
@@ -741,28 +746,38 @@ class ObjectList(QTableWidget):
         self.setColumnCount(len(ObjectList.horizontalHeader))
         self.setHorizontalHeaderLabels(ObjectList.horizontalHeader)
 
+        self.object_ids = []
+        self.object_actions = []
+
         # self.itemSelectionChanged.connect(self.before_value_pos)
         # self.itemChanged.connect(self.change_value)
 
-    def show_pid_bbox_action(self, object_ids, object_actions):
-        assert len(object_ids) == len(object_actions)
+    def show_pid_action(self):
+        if self.object_ids and self.object_actions:
+            assert len(self.object_ids) == len(self.object_actions)
+            self.clearContents()
+
+            rows = len(self.object_ids)
+            self.setRowCount(rows)
+            for row in range(rows):
+                # Pid
+                self.setItem(row, 0, QTableWidgetItem(str(self.object_ids[row])))
+
+                # Action label
+                qcombobox = QComboBox()
+                qcombobox.addItems(ObjectList.action_labels)
+                qcombobox.setCurrentIndex(ObjectList.action_labels.index(self.object_actions[row])
+                                          if self.object_actions[row] in ObjectList.action_labels else -1)
+                # qcombobox.currentIndexChanged.connect(self.change_value_for_check)
+                self.setCellWidget(row, 1, qcombobox)
+
+        pass
+
+    def reset_object_table(self):
+        self.object_ids = []
+        self.object_actions = []
         self.clearContents()
-
-        rows = len(object_ids)
-        self.setRowCount(rows)
-        for row in range(rows):
-            # Pid
-            self.setItem(row, 0, QTableWidgetItem(str(object_ids[row])))
-
-            # Action label
-            qcombobox = QComboBox()
-            qcombobox.addItems(ObjectList.action_labels)
-            qcombobox.setCurrentIndex(ObjectList.action_labels.index(object_actions[row])
-                                      if object_actions[row] in ObjectList.action_labels else -1)
-            # qcombobox.currentIndexChanged.connect(self.change_value_for_check)
-            self.setCellWidget(row, 1, qcombobox)
-
-            pass
+        self.setRowCount(0)
 
     def init_table(self):
         rows = len(self.json_matrix)
