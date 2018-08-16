@@ -38,13 +38,20 @@ class VideoLable(QLabel, QPainter):
         self.point_ind = -1  # Point index
         self.click_or_drag = 0  # click: 0, drag: 1. To determine draw rect or point
 
+        self.be_selected_ind = None
+
     def paintEvent(self, QPaintEvent):
+        print('(paintEvent)')
         QLabel.paintEvent(self, QPaintEvent)
         painter = QPainter(self)
-        pen = QPen(QColor(255, 0, 0), 2)
-        painter.setPen(pen)
         painter.begin(self)
+        painter.setPen(QPen(QColor(255, 0, 0), 2))
+
         for ii in range(self.ind + 1):
+            if self.be_selected_ind is not None and self.be_selected_ind < 100 and self.be_selected_ind == ii:
+                # print('(paintEvent)', self.be_selected_ind)
+                painter.setPen(QPen(QColor(0, 0, 255), 2))
+
             # rect = QRect(self.Rectangle_list[ii][0], self.Rectangle_list[ii][1],
             #              self.Rectangle_list[ii][2] - self.Rectangle_list[ii][0],
             #              self.Rectangle_list[ii][3] - self.Rectangle_list[ii][1])
@@ -52,13 +59,13 @@ class VideoLable(QLabel, QPainter):
                              self.Rectangle_list[ii][2] - self.Rectangle_list[ii][0],
                              self.Rectangle_list[ii][3] - self.Rectangle_list[ii][1])
 
-        pen = QPen(QColor(0, 0, 255), 9)
-        painter.setPen(pen)
+            if self.be_selected_ind is not None and self.be_selected_ind < 100 and self.be_selected_ind == ii:
+                painter.setPen(QPen(QColor(255, 0, 0), 2))
 
+        painter.setPen(QPen(QColor(0, 0, 255), 9))
         for ii in range(self.point_ind + 1):
             painter.drawPoint(self.Point_list[ii][0], self.Point_list[ii][1])
 
-        # print("(paintEvent)")
         painter.end()
 
     def mousePressEvent(self, e):
@@ -153,6 +160,11 @@ class VideoLable(QLabel, QPainter):
         self.ind = -1
         self.point_ind = -1
         self.click_or_drag = 0
+        self.be_selected_ind = None
+
+    def objcct_list_be_selected(self, be_selected_ind):
+        self.be_selected_ind = be_selected_ind
+        print('(objcct_list_be_selected)', self.be_selected_ind)
 
 
 class VideoBox(QMainWindow):
@@ -300,6 +312,7 @@ class VideoBox(QMainWindow):
         # Col 0
         left_qgroupbox_1 = QGroupBox('Software guide')
         left_qvboxlayout_1_1 = QVBoxLayout()
+        # left_qvboxlayout_1_1.addWidget(self.software_guide)
         left_qgroupbox_1.setLayout(left_qvboxlayout_1_1)
 
         left_qgroupbox_2 = QGroupBox('Video file list')
@@ -381,9 +394,15 @@ class VideoBox(QMainWindow):
         # Video Capture
         self.playCapture = VideoCapture()
 
-        # Paint json bbox Signal
-        # self.paintJson = Communicate()
-        # self.paintJson.signal[str].connect(self.pictureLabel.paintEvent)
+        # Be selected signal
+        self.be_selected_ind_signal = CommunicateVideoLableObjectListA()
+        self.be_selected_ind_signal.signal[int].connect(self.pictureLabel.objcct_list_be_selected)
+
+        self.be_selected_signal = CommunicateVideoLableObjectListB()
+        self.be_selected_signal.signal.connect(self.pictureLabel.update)
+
+        self.object_table.be_selected_ind_signal = self.be_selected_ind_signal
+        self.object_table.be_selected_signal = self.be_selected_signal
 
         p_desk = QApplication.desktop()
         screennum = p_desk.screenCount()
@@ -735,6 +754,14 @@ class VideoTimer(QThread):
         self.frequent = fps
 
 
+class CommunicateVideoLableObjectListA(QObject):
+    signal = pyqtSignal(int)
+
+
+class CommunicateVideoLableObjectListB(QObject):
+    signal = pyqtSignal()
+
+
 # ======================================================
 class ObjectList(QTableWidget):
     # horizontalHeader = ["PersonID", "xmin", "ymin", "xmax", "ymax", "lable"]
@@ -760,6 +787,9 @@ class ObjectList(QTableWidget):
 
         self.itemSelectionChanged.connect(self.item_selection_changed)
         self.itemChanged.connect(self.change_pid_value)
+
+        self.be_selected_ind_signal = None
+        self.be_selected_signal = None
 
     def show_pid_action(self):
         if self.objects_in_current_frame:
@@ -816,6 +846,10 @@ class ObjectList(QTableWidget):
             self.selected_item_col = None
 
         print(self.selected_item_row, self.selected_item_col, self.selected_item_value)
+
+        if self.be_selected_ind_signal and self.be_selected_signal:
+            self.be_selected_ind_signal.signal.emit(self.selected_item_row)
+            self.be_selected_signal.signal.emit()
 
     def change_pid_value(self):
         if self.selected_item_value is not None and self.selected_item_row is not None and \
