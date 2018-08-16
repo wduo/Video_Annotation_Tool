@@ -215,26 +215,17 @@ class VideoBox(QMainWindow):
 
         # Col 0
         self.software_guide = QLabel('''
-        step1.
-        加载视频文件。
-        如果不加载视频文件，
-        则无法加载Json文件，
-        所以请先执行本步操作。
-        step2.
-        加载Json文件。
-        如果加载视频文件后未加载Json文件，
-        您可以执行第3 4步，
-        但在第3步中所做操作产生的
-        结果不会在执行第4步后被被保存。
-        step3.
-        修改objectid，actionlabels。
-        修改或添加bboxes，keypoints。
-        step4.
-        保存第三步操作的结果到对应的Json文件。
-        当切换帧，即按下上一帧，下一帧，播放时，
-        自动保存。
+        1. Load the video file.
+
+        2. Load the json file with the same name as the video name.
+   
+        If the name are different, the json file load fails.
+        If do not load the json file, the bboxes and keypoints drawn on the canvas will not be saved.
+
+        3. Draw bboxes and keypoints, modify them, and save to the corresponding json file.
+
+        When the current frame is switched, it is automatically saved to the json file.
         
-        请随时关注最下方状态栏信息
         
         Video file name:
         No load video file, press CTRL+O to load it first!
@@ -377,7 +368,7 @@ class VideoBox(QMainWindow):
 
         # Central QWidget layout
         central_layout = QHBoxLayout()
-        central_layout.addLayout(left_qvboxlayout, 2)
+        central_layout.addLayout(left_qvboxlayout, 3)
         central_layout.addLayout(central_qvboxlayout, 8)
         central_layout.addLayout(right_qvboxlayout, 3)
 
@@ -397,7 +388,7 @@ class VideoBox(QMainWindow):
         p_desk = QApplication.desktop()
         screennum = p_desk.screenCount()
         screen_rect = p_desk.screenGeometry(0)
-        scale_factor = .8
+        scale_factor = .9
         self.setGeometry(screen_rect.width() * .5 - screen_rect.width() * scale_factor * .5,
                          screen_rect.height() * .5 - screen_rect.height() * scale_factor * .5,
                          screen_rect.width() * scale_factor,
@@ -578,7 +569,7 @@ class VideoBox(QMainWindow):
         self.current_frame = int(self.playCapture.get(1))
         self.statusBar().showMessage('fps: %s, current_frame: %s' % (self.fps, self.current_frame))
         self.pictureLabel.reset()
-        if self.object_table.object_ids and self.object_table.object_actions:
+        if self.object_table.objects_in_current_frame:
             self.object_table.reset_object_table()
         # self.video_slider.setSliderPosition(self.current_frame)
 
@@ -632,8 +623,9 @@ class VideoBox(QMainWindow):
                 self.pictureLabel.update()
 
                 # Update object_table
-                self.object_table.object_ids = object_ids
-                self.object_table.object_actions = object_actions
+                self.object_table.objects_in_current_frame = objects_in_current_frame
+                # self.object_table.object_ids = object_ids
+                # self.object_table.object_actions = object_actions
                 self.object_table.show_pid_action()
                 pass
 
@@ -748,6 +740,7 @@ class ObjectList(QTableWidget):
     # horizontalHeader = ["PersonID", "xmin", "ymin", "xmax", "ymax", "lable"]
     horizontalHeader = ["Person ID", "Action lable"]
     action_labels = ["0", "1", "2", "3", "4", "5"]
+    action_label_names = ["Paying", "Checking", "Looking", "Standing", "Walking", "Wandering"]
 
     def __init__(self):
         QTableWidget.__init__(self)
@@ -755,38 +748,46 @@ class ObjectList(QTableWidget):
         self.setColumnCount(len(ObjectList.horizontalHeader))
         self.setHorizontalHeaderLabels(ObjectList.horizontalHeader)
 
-        self.object_ids = []
-        self.object_actions = []
+        self.objects_in_current_frame = []
+        # self.object_ids = []
+        # self.object_actions = []
 
         self.selected_item_value = None
         self.selected_item_row = None
         self.selected_item_col = None
 
+        self.action_qcomboboxes = []
+
         self.itemSelectionChanged.connect(self.item_selection_changed)
-        self.itemChanged.connect(self.change_value)
+        self.itemChanged.connect(self.change_pid_value)
 
     def show_pid_action(self):
-        if self.object_ids and self.object_actions:
-            assert len(self.object_ids) == len(self.object_actions)
+        if self.objects_in_current_frame:
+            # assert len(self.object_ids) == len(self.object_actions)
             self.clearContents()
 
-            rows = len(self.object_ids)
+            rows = len(self.objects_in_current_frame)
             self.setRowCount(rows)
             for row in range(rows):
                 # Pid
-                self.setItem(row, 0, QTableWidgetItem(str(self.object_ids[row])))
+                self.setItem(row, 0, QTableWidgetItem(str(self.objects_in_current_frame[row]['id'])))
 
                 # Action label
-                qcombobox = QComboBox()
-                qcombobox.addItems(ObjectList.action_labels)
-                qcombobox.setCurrentIndex(ObjectList.action_labels.index(self.object_actions[row])
-                                          if self.object_actions[row] in ObjectList.action_labels else -1)
-                # qcombobox.currentIndexChanged.connect(self.change_value_for_check)
-                self.setCellWidget(row, 1, qcombobox)
+                self.action_qcomboboxes.append('-1')
+                self.action_qcomboboxes[row] = QComboBox()
+                self.action_qcomboboxes[row].addItems(ObjectList.action_label_names)
+                self.action_qcomboboxes[row].setCurrentIndex(
+                    self.objects_in_current_frame[row]['action']
+                    if str(self.objects_in_current_frame[row]['action']) in ObjectList.action_labels else -1)
+                self.action_qcomboboxes[row].currentIndexChanged.connect(self.change_action_label_value)
+                self.setItem(row, 1, QTableWidgetItem())
+                self.setCellWidget(row, 1, self.action_qcomboboxes[row])
 
     def reset_object_table(self):
-        self.object_ids = []
-        self.object_actions = []
+        self.objects_in_current_frame = []
+        # self.object_ids = []
+        # self.object_actions = []
+        self.action_qcomboboxes = []
         self.clearContents()
         self.setRowCount(0)
 
@@ -797,11 +798,18 @@ class ObjectList(QTableWidget):
         selected_item = self.selectedItems()
         # For person id column
         if selected_item and isinstance(selected_item[0], QTableWidgetItem):
-            self.selected_item_value = int(selected_item[0].text())
-            selected_item_index = self.indexFromItem(selected_item[0])
             # Selected_item location
+            selected_item_index = self.indexFromItem(selected_item[0])
             self.selected_item_row = selected_item_index.row()
             self.selected_item_col = selected_item_index.column()
+
+            if self.cellWidget(self.selected_item_row, self.selected_item_col):
+                selected_qcombobox = self.cellWidget(self.selected_item_row, self.selected_item_col)
+                selected_item_value = selected_qcombobox.currentText()
+                self.selected_item_value = int(self.action_label_names.index(selected_item_value)) \
+                    if selected_item_value is not '' else selected_item_value
+            else:
+                self.selected_item_value = int(selected_item[0].text())
         else:
             self.selected_item_value = None
             self.selected_item_row = None
@@ -809,44 +817,21 @@ class ObjectList(QTableWidget):
 
         print(self.selected_item_row, self.selected_item_col, self.selected_item_value)
 
-    def change_value(self):
+    def change_pid_value(self):
         if self.selected_item_value is not None and self.selected_item_row is not None and \
                 self.selected_item_col is not None:
             new_value = int(self.item(self.selected_item_row, self.selected_item_col).text())
             if self.selected_item_value != new_value:
-                self.object_ids[self.selected_item_row] = new_value
+                self.objects_in_current_frame[self.selected_item_row]['id'] = new_value
 
-            pass
-
-    def init_table(self):
-        rows = len(self.json_matrix)
-        cols = len(ObjectList.horizontalHeader)
-        self.setRowCount(rows)
-        self.instance_list = []
-        basic_str = "qcombobox"
-        for i in range(self.rowCount()):
-            self.instance_list.append(basic_str + str(i))
-            self.instance_list[i] = QComboBox()
-            self.instance_list[i].addItems(ObjectList.action_labels)
-            self.instance_list[i].setCurrentIndex(ObjectList.action_labels.index(self.json_matrix[i][-1])
-                                                  if self.json_matrix[i][-1] in ObjectList.action_labels else -1)
-            self.instance_list[i].currentIndexChanged.connect(self.change_value_for_check)
-            self.setCellWidget(i, self.columnCount() - 1, self.instance_list[i])
-        for row in range(rows):
-            for col in range(cols):
-                self.setItem(row, col, QTableWidgetItem(self.json_matrix[row][col]))
-
-    def change_value_for_check(self):
-        """
-        this is for the multible check connect
-        :return:
-        """
-        if hasattr(self, 'row') and hasattr(self, 'col'):
-
-            if self.value != self.instance_list[self.row].currentText():
-                self.json_matrix[self.row][self.col] = self.instance_list[self.row].currentText()
-            else:
-                self.json_matrix[self.row][self.col] = self.value
+    def change_action_label_value(self):
+        print('(change_action_label_value)')
+        if self.selected_item_value is not None and self.selected_item_row is not None and \
+                self.selected_item_col is not None and self.action_qcomboboxes:
+            new_value = self.action_qcomboboxes[self.selected_item_row].currentText()
+            new_value_index = int(self.action_label_names.index(new_value))
+            if self.selected_item_value != new_value_index:
+                self.objects_in_current_frame[self.selected_item_row]['action'] = new_value_index
 
 
 # ======================================================
