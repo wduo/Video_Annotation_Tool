@@ -695,7 +695,7 @@ class VideoBox(QMainWindow):
 
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.play_button.setText('Pause')
-            self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)))
+            self.video_slider.setMaximum(int(self.playCapture.get(CAP_PROP_FRAME_COUNT)) - 1)
 
             self.status = (VideoBox.STATUS_PLAYING,
                            VideoBox.STATUS_PAUSE,
