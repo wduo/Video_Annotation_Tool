@@ -41,7 +41,7 @@ class VideoLable(QLabel, QPainter):
         self.be_selected_ind = None
 
     def paintEvent(self, QPaintEvent):
-        print('(paintEvent)')
+        # print('(paintEvent)')
         QLabel.paintEvent(self, QPaintEvent)
         painter = QPainter(self)
         painter.begin(self)
@@ -50,7 +50,7 @@ class VideoLable(QLabel, QPainter):
         for ii in range(self.ind + 1):
             if self.be_selected_ind is not None and self.be_selected_ind < 100 and self.be_selected_ind == ii:
                 # print('(paintEvent)', self.be_selected_ind)
-                painter.setPen(QPen(QColor(0, 0, 255), 2))
+                painter.setPen(QPen(QColor(0, 0, 255), 3))
 
             # rect = QRect(self.Rectangle_list[ii][0], self.Rectangle_list[ii][1],
             #              self.Rectangle_list[ii][2] - self.Rectangle_list[ii][0],
