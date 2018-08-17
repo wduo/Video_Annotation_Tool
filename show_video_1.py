@@ -196,13 +196,15 @@ class VideoBox(QMainWindow):
         exitAction.triggered.connect(qApp.quit)
 
         loadVideo = QAction(QIcon('loadVideo.png'), '&Load video', self)
-        loadVideo.setShortcut('Ctrl+O')
-        loadVideo.setStatusTip('Load video')
+        # loadVideo.setShortcut('Ctrl+O')
+        loadVideo.setShortcut('F')
+        loadVideo.setStatusTip('Load video file')
         loadVideo.triggered.connect(self.Load_video)
 
         loadJson = QAction(QIcon('loadJson.png'), '&Load json', self)
-        loadJson.setShortcut('Ctrl+J')
-        loadJson.setStatusTip('Load json')
+        # loadJson.setShortcut('Ctrl+J')
+        loadJson.setShortcut('G')
+        loadJson.setStatusTip('Load json file')
         loadJson.triggered.connect(self.Load_json)
 
         saveAs = QAction(QIcon('loadJson.png'), '&Save as', self)
@@ -214,7 +216,7 @@ class VideoBox(QMainWindow):
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(loadVideo)
         fileMenu.addAction(loadJson)
-        fileMenu.addAction(saveAs)
+        # fileMenu.addAction(saveAs)
         fileMenu.addAction(exitAction)
 
         editMenu = menubar.addMenu('&Edit')
@@ -268,14 +270,17 @@ class VideoBox(QMainWindow):
 
         self.pre_button = QPushButton('Pre', self)
         self.pre_button.setIcon(QIcon('images/pre_frame'))
+        self.pre_button.setShortcut('Z')
         self.pre_button.clicked.connect(self.pre_frame)
 
         self.next_button = QPushButton('Next', self)
         self.next_button.setIcon(QIcon('images/next_frame'))
+        self.next_button.setShortcut('X')
         self.next_button.clicked.connect(self.next_frame)
 
         self.play_button = QPushButton('Play', self)
         self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.play_button.setShortcut('SPACE')
         self.play_button.clicked.connect(self.switch_status)
 
         self.slower_play_button = QPushButton('Slower', self)
