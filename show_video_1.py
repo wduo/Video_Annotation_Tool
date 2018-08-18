@@ -859,9 +859,13 @@ class ObjectList(QTableWidget):
     def change_pid_value(self):
         if self.selected_item_value is not None and self.selected_item_row is not None and \
                 self.selected_item_col is not None:
-            new_value = int(self.item(self.selected_item_row, self.selected_item_col).text())
-            if self.selected_item_value != new_value:
-                self.objects_in_current_frame[self.selected_item_row]['id'] = new_value
+            new_value = self.item(self.selected_item_row, self.selected_item_col).text()
+            if new_value.isdigit() or new_value == '-1':
+                new_value = int(new_value)
+                if self.selected_item_value != new_value:
+                    self.objects_in_current_frame[self.selected_item_row]['id'] = new_value
+            else:
+                self.setItem(self.selected_item_row, 0, QTableWidgetItem(str(self.selected_item_value)))
 
     def change_action_label_value(self):
         print('(change_action_label_value)')
