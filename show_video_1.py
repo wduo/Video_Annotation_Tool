@@ -39,6 +39,9 @@ class VideoLable(QLabel, QPainter):
         self.click_or_drag = 0  # click: 0, drag: 1. To determine draw rect or point
 
         self.be_selected_ind = None
+        self.be_del_ind = None
+
+        self.del_current_frame_json_struct_signal = None
 
     def paintEvent(self, QPaintEvent):
         # print('(paintEvent)')
@@ -161,10 +164,20 @@ class VideoLable(QLabel, QPainter):
         self.point_ind = -1
         self.click_or_drag = 0
         self.be_selected_ind = None
+        self.be_del_ind = None
 
-    def objcct_list_be_selected(self, be_selected_ind):
+    def objcct_list_be_selected_ind(self, be_selected_ind):
         self.be_selected_ind = be_selected_ind
-        print('(objcct_list_be_selected)', self.be_selected_ind)
+        print('(objcct_list_be_selected_ind)', self.be_selected_ind)
+
+    def object_list_be_del_ind(self, be_del_ind):
+        self.be_del_ind = be_del_ind
+        print('(object_list_be_del_ind)', self.be_del_ind)
+        self.Rectangle_list.pop(be_del_ind)
+        self.ind -= 1
+
+        if not self.Rectangle_list and self.ind == -1 and self.del_current_frame_json_struct_signal:
+            self.del_current_frame_json_struct_signal.signal.emit()
 
 
 class VideoBox(QMainWindow):
@@ -185,23 +198,23 @@ class VideoBox(QMainWindow):
         self.json_url = ""
         self.json_file_name = "default_json_name"
         self.json_data = []
-        self.all_frame_ids = []
+        self.all_frame_ids = []  # ids of frames that have objects in json_data
 
         # menuBar, statusBar
         self.statusBar().showMessage('Ready')
 
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)
-        exitAction.setShortcut('Ctrl+Q')
+        exitAction.setShortcut('Q')
         exitAction.setStatusTip('Exit application')
         exitAction.triggered.connect(qApp.quit)
 
-        loadVideo = QAction(QIcon('loadVideo.png'), '&Load video', self)
+        loadVideo = QAction(QIcon('loadVideo.png'), 'Load &Video', self)
         # loadVideo.setShortcut('Ctrl+O')
         loadVideo.setShortcut('F')
         loadVideo.setStatusTip('Load video file')
         loadVideo.triggered.connect(self.Load_video)
 
-        loadJson = QAction(QIcon('loadJson.png'), '&Load json', self)
+        loadJson = QAction(QIcon('loadJson.png'), 'Load &Json', self)
         # loadJson.setShortcut('Ctrl+J')
         loadJson.setShortcut('G')
         loadJson.setStatusTip('Load json file')
@@ -400,14 +413,28 @@ class VideoBox(QMainWindow):
         self.playCapture = VideoCapture()
 
         # Be selected signal
-        self.be_selected_ind_signal = CommunicateVideoLableObjectListA()
-        self.be_selected_ind_signal.signal[int].connect(self.pictureLabel.objcct_list_be_selected)
+        self.be_selected_ind_signal = CommunicateObjectList2VideoLableA()
+        self.be_selected_ind_signal.signal[int].connect(self.pictureLabel.objcct_list_be_selected_ind)
 
-        self.be_selected_signal = CommunicateVideoLableObjectListB()
-        self.be_selected_signal.signal.connect(self.pictureLabel.update)
+        # Be selected to highlight or del signal for update pictureLabel
+        self.be_selected_highlight_or_del_signal = CommunicateObjectList2VideoLableB()
+        self.be_selected_highlight_or_del_signal.signal.connect(self.pictureLabel.update)
 
+        # Be del signal
+        self.be_del_ind_signal = CommunicateObjectList2VideoLableC()
+        self.be_del_ind_signal.signal[int].connect(self.pictureLabel.object_list_be_del_ind)
+
+        # object_table sender
         self.object_table.be_selected_ind_signal = self.be_selected_ind_signal
-        self.object_table.be_selected_signal = self.be_selected_signal
+        self.object_table.be_selected_highlight_or_del_signal = self.be_selected_highlight_or_del_signal
+        self.object_table.be_del_ind_signal = self.be_del_ind_signal
+
+        # Del current frame json struct signal
+        self.del_current_frame_json_struct_signal = CommunicateVideoLable2VideoBox()
+        self.del_current_frame_json_struct_signal.signal.connect(self.del_current_frame_json_struct_when_no_object)
+
+        # pictureLabel sender
+        self.pictureLabel.del_current_frame_json_struct_signal = self.del_current_frame_json_struct_signal
 
         p_desk = QApplication.desktop()
         screennum = p_desk.screenCount()
@@ -625,7 +652,7 @@ class VideoBox(QMainWindow):
         if self.json_data:
             if self.current_frame in self.all_frame_ids:
                 self.statusBar().showMessage(
-                    'fps: %s, current_frame: %s, load bbox' % (self.fps, self.current_frame))
+                    'fps: %s, current_frame: %s, loaded bboxes' % (self.fps, self.current_frame))
                 objects_in_current_frame = self.json_data['frames'][
                     self.all_frame_ids.index(self.current_frame)]['objects']
                 object_ids = []
@@ -724,6 +751,12 @@ class VideoBox(QMainWindow):
     def Save_as(self):
         print('(Save_as)')
 
+    def del_current_frame_json_struct_when_no_object(self):
+        print('(del_current_frame_json_struct_when_no_object)')
+        current_frame_ind = self.all_frame_ids.index(self.current_frame)
+        self.json_data['frames'].pop(current_frame_ind)
+        self.all_frame_ids.pop(current_frame_ind)
+
 
 class Communicate(QObject):
     signal = pyqtSignal(str)
@@ -759,11 +792,19 @@ class VideoTimer(QThread):
         self.frequent = fps
 
 
-class CommunicateVideoLableObjectListA(QObject):
+class CommunicateObjectList2VideoLableA(QObject):
     signal = pyqtSignal(int)
 
 
-class CommunicateVideoLableObjectListB(QObject):
+class CommunicateObjectList2VideoLableB(QObject):
+    signal = pyqtSignal()
+
+
+class CommunicateObjectList2VideoLableC(QObject):
+    signal = pyqtSignal(int)
+
+
+class CommunicateVideoLable2VideoBox(QObject):
     signal = pyqtSignal()
 
 
@@ -794,7 +835,8 @@ class ObjectList(QTableWidget):
         self.itemChanged.connect(self.change_pid_value)
 
         self.be_selected_ind_signal = None
-        self.be_selected_signal = None
+        self.be_selected_highlight_or_del_signal = None
+        self.be_del_ind_signal = None
 
     def show_pid_action(self):
         if self.objects_in_current_frame:
@@ -852,9 +894,9 @@ class ObjectList(QTableWidget):
 
         print(self.selected_item_row, self.selected_item_col, self.selected_item_value)
 
-        if self.be_selected_ind_signal and self.be_selected_signal:
+        if self.be_selected_ind_signal and self.be_selected_highlight_or_del_signal:
             self.be_selected_ind_signal.signal.emit(self.selected_item_row)
-            self.be_selected_signal.signal.emit()
+            self.be_selected_highlight_or_del_signal.signal.emit()
 
     def change_pid_value(self):
         if self.selected_item_value is not None and self.selected_item_row is not None and \
@@ -875,6 +917,35 @@ class ObjectList(QTableWidget):
             new_value_index = int(self.action_label_names.index(new_value))
             if self.selected_item_value != new_value_index:
                 self.objects_in_current_frame[self.selected_item_row]['action'] = new_value_index
+
+    def contextMenuEvent(self, *args, **kwargs):
+        item_pop_menu = QMenu(self)
+        item_pop_menu.clear()
+
+        action_del_1 = QAction('Delete', self)
+        action_del_1.triggered.connect(self.del_selected_item)
+        action_del_2 = QAction('Delete', self)
+        action_del_2.triggered.connect(self.del_selected_item)
+        action_del_3 = QAction('Delete', self)
+        action_del_3.triggered.connect(self.del_selected_item)
+
+        item_pop_menu.addAction(action_del_1)
+        item_pop_menu.addAction(action_del_2)
+        item_pop_menu.addAction(action_del_3)
+        item_pop_menu.exec(QCursor.pos())
+
+    def del_selected_item(self):
+        # print('(del_selected_item)')
+        print('Delete item:', self.selected_item_row)
+
+        if self.selected_item_row is not None:
+            if self.be_del_ind_signal and self.be_selected_highlight_or_del_signal:
+                self.be_del_ind_signal.signal.emit(self.selected_item_row)
+                self.be_selected_highlight_or_del_signal.signal.emit()
+
+            self.objects_in_current_frame.pop(self.selected_item_row)
+            self.removeRow(self.selected_item_row)
+            self.setRowCount(len(self.objects_in_current_frame))
 
 
 # ======================================================
