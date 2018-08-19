@@ -266,7 +266,7 @@ class VideoBox(QMainWindow):
         # self.infoLabel = QLabel('Info:')
         self.pictureLabel = VideoLable()
         self.pictureLabel.setGeometry(0, 0, 1000, 10000)
-        init_image = QPixmap("images/video_init.png")
+        init_image = QPixmap("icons/video_init.png")
         self.pictureLabel.setPixmap(init_image)
         # print(self.pictureLabel.geometry().width())
         # self.textLabel = QLabel('(50, 66, 200, 320, grab)\n(50, 66, 200, 320, eat)\n(50, 66, 200, 320, wandering)\n')
@@ -282,12 +282,12 @@ class VideoBox(QMainWindow):
         self.video_slider.valueChanged.connect(self.video_slider_drag)
 
         self.pre_button = QPushButton('Pre', self)
-        self.pre_button.setIcon(QIcon('images/pre_frame'))
+        self.pre_button.setIcon(QIcon('icons/pre_frame'))
         self.pre_button.setShortcut('Z')
         self.pre_button.clicked.connect(self.pre_frame)
 
         self.next_button = QPushButton('Next', self)
-        self.next_button.setIcon(QIcon('images/next_frame'))
+        self.next_button.setIcon(QIcon('icons/next_frame'))
         self.next_button.setShortcut('X')
         self.next_button.clicked.connect(self.next_frame)
 
@@ -445,8 +445,8 @@ class VideoBox(QMainWindow):
                          screen_rect.width() * scale_factor,
                          screen_rect.height() * scale_factor)
         self.setWindowTitle(' Video Annotater')
-        self.setWindowIcon(QIcon('images/icon_0.png'))
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('images/icon_0.png')
+        self.setWindowIcon(QIcon('icons/icon_0.png'))
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('icons/icon_0.png')
 
     def pre_frame(self):
         print('(pre_frame)')
