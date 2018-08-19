@@ -473,6 +473,14 @@ class VideoBox(QMainWindow):
         self.setWindowIcon(QIcon('icons/icon_0.png'))
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('icons/icon_0.png')
 
+    # def closeEvent(self, event):
+    #     reply = QMessageBox.question(self, 'Message', "Are you sure to quit?",
+    #                                  QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+    #     if reply == QMessageBox.Yes:
+    #         event.accept()
+    #     else:
+    #         event.ignore()
+
     def pre_frame(self):
         print('(pre_frame)')
         if self.playCapture.isOpened():
