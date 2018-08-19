@@ -42,6 +42,7 @@ class VideoLable(QLabel, QPainter):
         self.be_del_ind = None
 
         self.del_current_frame_json_struct_signal = None
+        self.new_drew_on_videolabel_signal = None
 
     def paintEvent(self, QPaintEvent):
         # print('(paintEvent)')
@@ -87,14 +88,22 @@ class VideoLable(QLabel, QPainter):
         self.drawing = 0
 
         print('click_or_drag:', self.click_or_drag)
-        if self.click_or_drag == 0:
+        if self.click_or_drag == 0 and self.dragging == 0:
             if self.Rectangle_list:  # This if judge fixed bug that when playing and clicking occur simultaneously
                 self.Point_list.append(self.Rectangle_list.pop(-1)[:2])
                 self.point_ind += 1
                 self.ind -= 1
                 self.update()
-        else:
+        elif self.click_or_drag == 0 and self.dragging == 1:
+            pass
+        elif self.click_or_drag == 1 and self.dragging == 0:
+            if self.new_drew_on_videolabel_signal:
+                self.new_drew_on_videolabel_signal.signal.emit(self.ind)
+
             self.click_or_drag = 0
+        elif self.click_or_drag == 1 and self.dragging == 1:
+            self.click_or_drag = 0
+
         print('Rectangle_list:', self.Rectangle_list)
         print('Point_list:', self.Point_list)
 
@@ -199,6 +208,7 @@ class VideoBox(QMainWindow):
         self.json_file_name = "default_json_name"
         self.json_data = []
         self.all_frame_ids = []  # ids of frames that have objects in json_data
+        self.pid_action_label_of_new_add_objects = dict()
 
         # menuBar, statusBar
         self.statusBar().showMessage('Ready')
@@ -436,6 +446,21 @@ class VideoBox(QMainWindow):
         # pictureLabel sender
         self.pictureLabel.del_current_frame_json_struct_signal = self.del_current_frame_json_struct_signal
 
+        # New drew on videolabel signal
+        self.new_drew_on_videolabel_signal = CommunicateVideoLable2ObjectList()
+        self.new_drew_on_videolabel_signal.signal[int].connect(self.object_table.add_new_item_when_drew_on_videolabel)
+
+        # pictureLabel sender
+        self.pictureLabel.new_drew_on_videolabel_signal = self.new_drew_on_videolabel_signal
+
+        # pid and action label of new add objects changed signal
+        self.pid_action_label_of_new_add_objects_signal = CommunicateObjectList2VideoBox()
+        self.pid_action_label_of_new_add_objects_signal.signal[int, int, int].connect(
+            self.save_pid_action_label_of_new_add_objects)
+
+        # object_table sender
+        self.object_table.pid_action_label_of_new_add_objects_signal = self.pid_action_label_of_new_add_objects_signal
+
         p_desk = QApplication.desktop()
         screennum = p_desk.screenCount()
         screen_rect = p_desk.screenGeometry(0)
@@ -551,7 +576,12 @@ class VideoBox(QMainWindow):
                     if new_objects_count_in_current_frame != init_objects_count_in_current_frame:
                         # New add objects of frame that have objects from json file before new add
                         if new_objects_count_in_current_frame > init_objects_count_in_current_frame:
+                            bboxes_maybe_modify = self.pictureLabel.Rectangle_list[:init_objects_count_in_current_frame]
+                            for ii in bboxes_maybe_modify:
+                                coord_transform(ii)
+
                             new_add_bboxes = self.pictureLabel.Rectangle_list[init_objects_count_in_current_frame:]
+                            new_add_object_ind = init_objects_count_in_current_frame
                             for ii in new_add_bboxes:
                                 coord_transform(ii)
                                 one_object_struct = {
@@ -562,8 +592,16 @@ class VideoBox(QMainWindow):
                                     "action": -1
                                 }
                                 new_add_objects = one_object_struct
+
                                 new_add_objects["bbox"] = ii
+                                if self.pid_action_label_of_new_add_objects.get(new_add_object_ind):
+                                    new_add_objects["id"] = \
+                                        self.pid_action_label_of_new_add_objects[new_add_object_ind][0]
+                                    new_add_objects["action"] = \
+                                        self.pid_action_label_of_new_add_objects[new_add_object_ind][1]
+
                                 init_objects_in_current_frame.append(new_add_objects)
+                                new_add_object_ind += 1
                         # Del objects from frame whose objects from json file
                         if new_objects_count_in_current_frame < init_objects_count_in_current_frame:
                             pass
@@ -587,6 +625,7 @@ class VideoBox(QMainWindow):
                     init_frames_in_json_file.insert(insert_index, new_add_frame)
 
                     new_add_bboxes = self.pictureLabel.Rectangle_list
+                    new_add_object_ind = 0
                     for ii in new_add_bboxes:
                         coord_transform(ii)
                         one_object_struct = {
@@ -597,9 +636,17 @@ class VideoBox(QMainWindow):
                             "action": -1
                         }
                         new_add_objects = one_object_struct
+
                         new_add_objects["bbox"] = ii
+                        if self.pid_action_label_of_new_add_objects.get(new_add_object_ind):
+                            new_add_objects["id"] = \
+                                self.pid_action_label_of_new_add_objects[new_add_object_ind][0]
+                            new_add_objects["action"] = \
+                                self.pid_action_label_of_new_add_objects[new_add_object_ind][1]
+
                         init_frames_in_json_file[self.all_frame_ids.index(self.current_frame)]['objects'].append(
                             new_add_objects)
+                        new_add_object_ind += 1
 
             # Save json_data var to json file
             self._save_to_json_file()
@@ -753,9 +800,18 @@ class VideoBox(QMainWindow):
 
     def del_current_frame_json_struct_when_no_object(self):
         print('(del_current_frame_json_struct_when_no_object)')
-        current_frame_ind = self.all_frame_ids.index(self.current_frame)
-        self.json_data['frames'].pop(current_frame_ind)
-        self.all_frame_ids.pop(current_frame_ind)
+        if self.current_frame in self.all_frame_ids:
+            current_frame_ind = self.all_frame_ids.index(self.current_frame)
+            self.json_data['frames'].pop(current_frame_ind)
+            self.all_frame_ids.pop(current_frame_ind)
+
+    def save_pid_action_label_of_new_add_objects(self, object_id, pid, action_label):
+        if not self.pid_action_label_of_new_add_objects.get(object_id):
+            self.pid_action_label_of_new_add_objects[object_id] = [-1, -1]
+        if pid is not -1:
+            self.pid_action_label_of_new_add_objects[object_id][0] = pid
+        if action_label is not -1:
+            self.pid_action_label_of_new_add_objects[object_id][1] = action_label
 
 
 class Communicate(QObject):
@@ -793,19 +849,33 @@ class VideoTimer(QThread):
 
 
 class CommunicateObjectList2VideoLableA(QObject):
+    # Be selected signal
     signal = pyqtSignal(int)
 
 
 class CommunicateObjectList2VideoLableB(QObject):
+    # Be selected to highlight or del signal for update pictureLabel
     signal = pyqtSignal()
 
 
 class CommunicateObjectList2VideoLableC(QObject):
+    # Be del signal
     signal = pyqtSignal(int)
 
 
 class CommunicateVideoLable2VideoBox(QObject):
+    # Del current frame json struct signal
     signal = pyqtSignal()
+
+
+class CommunicateVideoLable2ObjectList(QObject):
+    # New drew on videolabel signal
+    signal = pyqtSignal(int)
+
+
+class CommunicateObjectList2VideoBox(QObject):
+    # pid and action label of new add objects changed signal
+    signal = pyqtSignal(int, int, int)
 
 
 # ======================================================
@@ -821,7 +891,7 @@ class ObjectList(QTableWidget):
         self.setColumnCount(len(ObjectList.horizontalHeader))
         self.setHorizontalHeaderLabels(ObjectList.horizontalHeader)
 
-        self.objects_in_current_frame = []
+        self.objects_in_current_frame = None
         # self.object_ids = []
         # self.object_actions = []
 
@@ -837,6 +907,7 @@ class ObjectList(QTableWidget):
         self.be_selected_ind_signal = None
         self.be_selected_highlight_or_del_signal = None
         self.be_del_ind_signal = None
+        self.pid_action_label_of_new_add_objects_signal = None
 
     def show_pid_action(self):
         if self.objects_in_current_frame:
@@ -905,7 +976,13 @@ class ObjectList(QTableWidget):
             if new_value.isdigit() or new_value == '-1':
                 new_value = int(new_value)
                 if self.selected_item_value != new_value:
-                    self.objects_in_current_frame[self.selected_item_row]['id'] = new_value
+                    if self.selected_item_row > len(self.objects_in_current_frame) - 1:
+                        if self.pid_action_label_of_new_add_objects_signal:
+                            self.pid_action_label_of_new_add_objects_signal.signal.emit(self.selected_item_row,
+                                                                                        new_value, -1)
+                        pass
+                    else:
+                        self.objects_in_current_frame[self.selected_item_row]['id'] = new_value
             else:
                 self.setItem(self.selected_item_row, 0, QTableWidgetItem(str(self.selected_item_value)))
 
@@ -916,7 +993,13 @@ class ObjectList(QTableWidget):
             new_value = self.action_qcomboboxes[self.selected_item_row].currentText()
             new_value_index = int(self.action_label_names.index(new_value))
             if self.selected_item_value != new_value_index:
-                self.objects_in_current_frame[self.selected_item_row]['action'] = new_value_index
+                if self.selected_item_row > len(self.objects_in_current_frame) - 1:
+                    if self.pid_action_label_of_new_add_objects_signal:
+                        self.pid_action_label_of_new_add_objects_signal.signal.emit(self.selected_item_row, -1,
+                                                                                    new_value_index)
+                    pass
+                else:
+                    self.objects_in_current_frame[self.selected_item_row]['action'] = new_value_index
 
     def contextMenuEvent(self, *args, **kwargs):
         item_pop_menu = QMenu(self)
@@ -943,9 +1026,32 @@ class ObjectList(QTableWidget):
                 self.be_del_ind_signal.signal.emit(self.selected_item_row)
                 self.be_selected_highlight_or_del_signal.signal.emit()
 
-            self.objects_in_current_frame.pop(self.selected_item_row)
+            if self.objects_in_current_frame and self.selected_item_row < len(self.objects_in_current_frame):
+                self.objects_in_current_frame.pop(self.selected_item_row)
             self.removeRow(self.selected_item_row)
-            self.setRowCount(len(self.objects_in_current_frame))
+            # self.setRowCount(len(self.objects_in_current_frame))
+
+    def add_new_item_when_drew_on_videolabel(self, new_item_ind):
+        print('(add_new_item_when_drew_in_videolabel)')
+        if self.objects_in_current_frame is not None:
+            rows = self.rowCount()
+            assert new_item_ind == rows
+            # assert new_item_ind == len(self.action_qcomboboxes)
+            self.setRowCount(rows + 1)
+
+            # Pid
+            self.setItem(new_item_ind, 0, QTableWidgetItem(str(-1)))
+
+            # Action label
+            self.action_qcomboboxes.append('-1')
+            self.action_qcomboboxes[new_item_ind] = QComboBox()
+            self.action_qcomboboxes[new_item_ind].addItems(ObjectList.action_label_names)
+            self.action_qcomboboxes[new_item_ind].setCurrentIndex(-1)
+            self.action_qcomboboxes[new_item_ind].currentIndexChanged.connect(self.change_action_label_value)
+            self.setItem(new_item_ind, 1, QTableWidgetItem())
+            self.setCellWidget(new_item_ind, 1, self.action_qcomboboxes[new_item_ind])
+
+        pass
 
 
 # ======================================================
