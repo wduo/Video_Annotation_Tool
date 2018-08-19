@@ -922,7 +922,7 @@ class ObjectList(QTableWidget):
         item_pop_menu = QMenu(self)
         item_pop_menu.clear()
 
-        action_del_1 = QAction('Delete', self)
+        action_del_1 = QAction('&Delete', self)
         action_del_1.triggered.connect(self.del_selected_item)
         action_del_2 = QAction('Delete', self)
         action_del_2.triggered.connect(self.del_selected_item)
