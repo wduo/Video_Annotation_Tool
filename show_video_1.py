@@ -677,6 +677,7 @@ class VideoBox(QMainWindow):
         self.pictureLabel.reset()
         if self.object_table.objects_in_current_frame:
             self.object_table.reset_object_table()
+        self.pid_action_label_of_new_add_objects = dict()
         # self.video_slider.setSliderPosition(self.current_frame)
 
         success, frame = self.playCapture.read()
@@ -774,6 +775,7 @@ class VideoBox(QMainWindow):
             self.json_url = ""
             self.json_file_name = "default_json_name"
             self.json_data = []
+            self.object_table.objects_in_current_frame = []
 
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.play_button.setText('Pause')
@@ -899,7 +901,7 @@ class ObjectList(QTableWidget):
         self.setColumnCount(len(ObjectList.horizontalHeader))
         self.setHorizontalHeaderLabels(ObjectList.horizontalHeader)
 
-        self.objects_in_current_frame = None
+        self.objects_in_current_frame = []
         # self.object_ids = []
         # self.object_actions = []
 
@@ -1041,23 +1043,23 @@ class ObjectList(QTableWidget):
 
     def add_new_item_when_drew_on_videolabel(self, new_item_ind):
         print('(add_new_item_when_drew_in_videolabel)')
-        if self.objects_in_current_frame is not None:
-            rows = self.rowCount()
-            assert new_item_ind == rows
-            # assert new_item_ind == len(self.action_qcomboboxes)
-            self.setRowCount(rows + 1)
+        # if self.objects_in_current_frame is not None:
+        rows = self.rowCount()
+        assert new_item_ind == rows
+        # assert new_item_ind == len(self.action_qcomboboxes)
+        self.setRowCount(rows + 1)
 
-            # Pid
-            self.setItem(new_item_ind, 0, QTableWidgetItem(str(-1)))
+        # Pid
+        self.setItem(new_item_ind, 0, QTableWidgetItem(str(-1)))
 
-            # Action label
-            self.action_qcomboboxes.append('-1')
-            self.action_qcomboboxes[new_item_ind] = QComboBox()
-            self.action_qcomboboxes[new_item_ind].addItems(ObjectList.action_label_names)
-            self.action_qcomboboxes[new_item_ind].setCurrentIndex(-1)
-            self.action_qcomboboxes[new_item_ind].currentIndexChanged.connect(self.change_action_label_value)
-            self.setItem(new_item_ind, 1, QTableWidgetItem())
-            self.setCellWidget(new_item_ind, 1, self.action_qcomboboxes[new_item_ind])
+        # Action label
+        self.action_qcomboboxes.append('-1')
+        self.action_qcomboboxes[new_item_ind] = QComboBox()
+        self.action_qcomboboxes[new_item_ind].addItems(ObjectList.action_label_names)
+        self.action_qcomboboxes[new_item_ind].setCurrentIndex(-1)
+        self.action_qcomboboxes[new_item_ind].currentIndexChanged.connect(self.change_action_label_value)
+        self.setItem(new_item_ind, 1, QTableWidgetItem())
+        self.setCellWidget(new_item_ind, 1, self.action_qcomboboxes[new_item_ind])
 
         pass
 
