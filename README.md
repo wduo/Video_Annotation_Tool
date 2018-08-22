@@ -1,5 +1,5 @@
 
-Software guide:
+# Software guide
 
 1. Load the video file.
 
@@ -13,7 +13,7 @@ Software guide:
     When the current frame is switched, it is automatically saved to the json file.
 
 
-Hotkeys:
+# Hotkeys
 
 F: Load video
 

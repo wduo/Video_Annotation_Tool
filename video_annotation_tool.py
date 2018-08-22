@@ -287,9 +287,11 @@ class VideoBox(QMainWindow):
         self.video_slider = QSlider()
         self.video_slider.setOrientation(Qt.Horizontal)
         self.video_slider.setMinimum(0)
-        self.video_slider.setMaximum(100)
+        self.video_slider.setMaximum(99)
         self.video_slider.setSingleStep(10)
-        self.video_slider.valueChanged.connect(self.video_slider_drag)
+        # self.video_slider.installEventFilter(self)
+        # self.video_slider.valueChanged.connect(self.video_slider_drag)
+        self.video_slider.sliderMoved.connect(self.video_slider_drag)
 
         self.pre_button = QPushButton('Pre', self)
         self.pre_button.setIcon(QIcon('icons/pre_frame'))
@@ -679,6 +681,7 @@ class VideoBox(QMainWindow):
             self.object_table.reset_object_table()
         self.pid_action_label_of_new_add_objects = dict()
         # self.video_slider.setSliderPosition(self.current_frame)
+        # self.video_slider.setValue(self.current_frame)
 
         success, frame = self.playCapture.read()
         if success:
@@ -688,7 +691,7 @@ class VideoBox(QMainWindow):
             elif frame.ndim == 2:
                 rgb = cvtColor(frame, COLOR_GRAY2BGR)
             temp_image = QImage(rgb.flatten(), width, height, QImage.Format_RGB888)
-            temp_image = temp_image.scaled(1000, 2000, 1)
+            temp_image = temp_image.scaled(1000, 10000, 1)
             temp_pixmap = QPixmap.fromImage(temp_image)
             self.pictureLabel.setPixmap(temp_pixmap)
         else:
@@ -822,6 +825,24 @@ class VideoBox(QMainWindow):
             self.pid_action_label_of_new_add_objects[object_id][0] = pid
         if action_label is not -1:
             self.pid_action_label_of_new_add_objects[object_id][1] = action_label
+
+    # def eventFilter(self, obj, event):
+    #     if obj == self.video_slider:
+    #         if event.type() == QEvent.MouseButtonPress:
+    #             print('(MouseButtonPress)')
+    #             if self.status == self.STATUS_PLAYING:
+    #                 self.video_slider.init_is_or_not_playing = 1
+    #                 self.status = self.STATUS_PAUSE
+    #                 self.timer.stop()
+    #
+    #         if event.type() == QEvent.MouseButtonRelease:
+    #             print('(MouseButtonRelease)')
+    #             if self.status == self.STATUS_PAUSE and self.video_slider.init_is_or_not_playing == 1:
+    #                 self.video_slider.init_is_or_not_playing = 0
+    #                 self.status = self.STATUS_PLAYING
+    #                 self.timer.start()
+    #
+    #     return QMainWindow.eventFilter(self, obj, event)
 
 
 class Communicate(QObject):
@@ -1066,8 +1087,30 @@ class ObjectList(QTableWidget):
 
 # ======================================================
 
+# class VideoSlider(QSlider, QEvent, QObject):
+#     def __init__(self):
+#         # super(QSlider, self).__init__()
+#         QSlider.__init__(self)
+#         self.setOrientation(Qt.Horizontal)
+#         self.setValue(0)
+#         self.setMinimum(0)
+#         self.setMaximum(99)
+#         self.setSingleStep(10)
+#
+#         self.video_playing_status = 0  # 0: playing, 1: pause
+#
+#     # def mousePressEvent(self, QMouseEvent):
+#     #     print('(mousePressEvent)', self.video_playing_status)
+#     #
+#     # def mouseReleaseEvent(self, QMouseEvent):
+#     #     print('(mouseReleaseEvent)', self.video_playing_status)
+#
+#     pass
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     box = VideoBox()
     box.show()
+    # app.installEventFilter(box)
     sys.exit(app.exec_())
