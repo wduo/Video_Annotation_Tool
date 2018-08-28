@@ -292,6 +292,9 @@ class VideoBox(QMainWindow):
         # self.video_slider.installEventFilter(self)
         # self.video_slider.valueChanged.connect(self.video_slider_drag)
         self.video_slider.sliderMoved.connect(self.video_slider_drag)
+        self.video_slider.sliderPressed.connect(self.video_slider_pressed)
+        self.video_slider.sliderReleased.connect(self.video_slider_released)
+        self.video_slider.playing_or_pause = 0
 
         self.pre_button = QPushButton('Pre', self)
         self.pre_button.setIcon(QIcon('icons/pre_frame'))
@@ -676,12 +679,15 @@ class VideoBox(QMainWindow):
     def _show_frame(self):
         self.current_frame = int(self.playCapture.get(1))
         self.statusBar().showMessage('fps: %s, current_frame: %s' % (self.fps, self.current_frame))
+
         self.pictureLabel.reset()
         if self.object_table.objects_in_current_frame:
             self.object_table.reset_object_table()
         self.pid_action_label_of_new_add_objects = dict()
-        # self.video_slider.setSliderPosition(self.current_frame)
-        # self.video_slider.setValue(self.current_frame)
+
+        if self.status == self.STATUS_PLAYING:
+            self.video_slider.setSliderPosition(self.current_frame)
+            # self.video_slider.setValue(self.current_frame)
 
         success, frame = self.playCapture.read()
         if success:
@@ -758,6 +764,22 @@ class VideoBox(QMainWindow):
             self.playCapture.set(cv2.CAP_PROP_POS_FRAMES, self.video_slider.value())
 
             self.show_frame()
+
+    def video_slider_pressed(self):
+        print('(video_slider_pressed)')
+        if self.playCapture.isOpened():
+            if self.status == self.STATUS_PLAYING:
+                self.video_slider.playing_or_pause = 1
+                self.status = self.STATUS_PAUSE
+                self.timer.stop()
+
+    def video_slider_released(self):
+        print('(video_slider_released)')
+        if self.playCapture.isOpened():
+            if self.video_slider.playing_or_pause == 1:
+                self.video_slider.playing_or_pause = 0
+                self.status = self.STATUS_PLAYING
+                self.timer.start()
 
     def Load_video(self):
         print('(Load_video)')
