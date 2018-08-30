@@ -1,0 +1,1 @@
+pyinstaller -p "D:\Program Files\Python\Python36-32\Lib\site-packages\PyQt5\Qt\bin" --hidden-import PyQt5.sip --add-binary="D:\Program Files\Python\Python36-32\Lib\site-packages\cv2\opencv_ffmpeg341_64.dll;." -F -w --clean __main__.py
