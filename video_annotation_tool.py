@@ -681,7 +681,7 @@ class VideoBox(QMainWindow):
         self.statusBar().showMessage('fps: %s, current_frame: %s' % (self.fps, self.current_frame))
 
         self.pictureLabel.reset()
-        if self.object_table.objects_in_current_frame:
+        if self.object_table.objects_in_current_frame or self.object_table.rowCount():
             self.object_table.reset_object_table()
         self.pid_action_label_of_new_add_objects = dict()
 
